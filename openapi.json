@@ -1,0 +1,394 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "BOWAS API",
+    "version": "1.0.0",
+    "description": "REST API for WhatsApp messaging with JWT authentication."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Default local server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "API status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "examples": {
+                  "ready": {
+                    "value": {
+                      "status": "ok",
+                      "whatsappReady": true
+                    }
+                  },
+                  "notReady": {
+                    "value": {
+                      "status": "ok",
+                      "whatsappReady": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Login and get JWT token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "defaultCredentials": {
+                  "value": {
+                    "username": "admin",
+                    "password": "admin"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                },
+                "examples": {
+                  "success": {
+                    "value": {
+                      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiJ9.signature",
+                      "tokenType": "Bearer",
+                      "expiresIn": 3600
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "invalidJson": {
+                    "value": {
+                      "error": "Invalid JSON body"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "invalidCredentials": {
+                    "value": {
+                      "error": "Invalid username or password"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/send": {
+      "post": {
+        "operationId": "sendMessage",
+        "summary": "Send WhatsApp message",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              },
+              "examples": {
+                "numberFormat": {
+                  "value": {
+                    "to": "6281234567890",
+                    "message": "hello from API"
+                  }
+                },
+                "chatIdFormat": {
+                  "value": {
+                    "to": "6281234567890@c.us",
+                    "message": "hello explicit chat id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                },
+                "examples": {
+                  "success": {
+                    "value": {
+                      "ok": true,
+                      "to": "6281234567890@c.us",
+                      "id": "ABGGFlA5FpafAgo6EhQ2M2Iw"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or JSON parse error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "missingFields": {
+                    "value": {
+                      "error": "Required fields: to, message"
+                    }
+                  },
+                  "invalidJson": {
+                    "value": {
+                      "error": "Invalid JSON body"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Bearer"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "missingBearer": {
+                    "value": {
+                      "error": "Unauthorized: Missing Bearer token"
+                    }
+                  },
+                  "invalidSignature": {
+                    "value": {
+                      "error": "Unauthorized: Invalid signature"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "WhatsApp client not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "notReady": {
+                    "value": {
+                      "error": "WhatsApp client is not ready yet"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to send message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "sendFailure": {
+                    "value": {
+                      "error": "Failed to send message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "whatsappReady"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "whatsappReady": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "admin"
+          },
+          "password": {
+            "type": "string",
+            "example": "admin"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "token",
+          "tokenType",
+          "expiresIn"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT token (HS256)"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ],
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3600
+          }
+        }
+      },
+      "SendRequest": {
+        "type": "object",
+        "required": [
+          "to",
+          "message"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Phone number or WhatsApp chat id (@c.us / @g.us)",
+            "example": "6281234567890"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "example": "hello from API"
+          }
+        }
+      },
+      "SendResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "to",
+          "id"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "to": {
+            "type": "string",
+            "example": "6281234567890@c.us"
+          },
+          "id": {
+            "type": "string",
+            "nullable": true,
+            "example": "ABGGFlA5FpafAgo6EhQ2M2Iw"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Invalid JSON body"
+          }
+        }
+      }
+    }
+  }
+}
