@@ -141,6 +141,8 @@ function createApiHandler(config) {
     authPassword,
     jwtTtlSeconds,
     jwtService,
+    deauthClient,
+    requestAuthQr,
   } = config;
 
   return async (req, res) => {
@@ -223,6 +225,66 @@ function createApiHandler(config) {
         return sendJson(res, 500, {
           error: err?.message || 'Failed to send message',
         });
+      }
+    }
+
+    if (req.method === 'POST' && req.url === '/whatsapp/deauth') {
+      const auth = jwtService.authenticateRequest(req);
+      if (!auth.ok) {
+        return sendJson(
+          res,
+          401,
+          { error: `Unauthorized: ${auth.reason}` },
+          { 'WWW-Authenticate': 'Bearer' }
+        );
+      }
+
+      if (typeof deauthClient !== 'function') {
+        return sendJson(res, 500, { error: 'Deauth is not configured' });
+      }
+
+      try {
+        await deauthClient();
+        return sendJson(res, 200, {
+          ok: true,
+          message: 'WhatsApp client deauthenticated. A new QR will be generated shortly.',
+        });
+      } catch (err) {
+        return sendJson(res, 500, {
+          error: err?.message || 'Failed to deauthenticate client',
+        });
+      }
+    }
+
+    if (req.method === 'POST' && req.url === '/whatsapp/auth') {
+      const auth = jwtService.authenticateRequest(req);
+      if (!auth.ok) {
+        return sendJson(
+          res,
+          401,
+          { error: `Unauthorized: ${auth.reason}` },
+          { 'WWW-Authenticate': 'Bearer' }
+        );
+      }
+
+      let body;
+      try {
+        body = await readJsonBody(req);
+      } catch {
+        return sendJson(res, 400, { error: 'Invalid JSON body' });
+      }
+
+      if (typeof requestAuthQr !== 'function') {
+        return sendJson(res, 500, { error: 'Auth QR request is not configured' });
+      }
+
+      try {
+        const result = await requestAuthQr({ text: body.text === true });
+        return sendJson(res, 200, result);
+      } catch (err) {
+        const message = err?.message || 'Failed to get auth QR';
+        const statusCode = message.includes('already authenticated') ? 409 : 503;
+        return sendJson(res, statusCode, { error: message });
       }
     }
 

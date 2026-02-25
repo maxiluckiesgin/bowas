@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: REST API for WhatsApp messaging with JWT authentication.
 servers:
-  - url: http://localhost:3000
-    description: Default local server
+- url: http://localhost:3000
+  description: Default local server
 paths:
   /health:
     get:
@@ -80,7 +80,7 @@ paths:
       operationId: sendMessage
       summary: Send WhatsApp message
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -90,11 +90,11 @@ paths:
             examples:
               numberFormat:
                 value:
-                  to: "6281234567890"
+                  to: '6281234567890'
                   message: hello from API
               chatIdFormat:
                 value:
-                  to: "6281234567890@c.us"
+                  to: 6281234567890@c.us
                   message: hello explicit chat id
       responses:
         '200':
@@ -107,7 +107,7 @@ paths:
                 success:
                   value:
                     ok: true
-                    to: "6281234567890@c.us"
+                    to: 6281234567890@c.us
                     id: ABGGFlA5FpafAgo6EhQ2M2Iw
         '400':
           description: Validation or JSON parse error
@@ -160,6 +160,131 @@ paths:
                 sendFailure:
                   value:
                     error: Failed to send message
+  /whatsapp/deauth:
+    post:
+      operationId: whatsappDeauth
+      summary: Deauthenticate WhatsApp client
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Client deauthenticated and reinit requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeauthResponse'
+              examples:
+                success:
+                  value:
+                    ok: true
+                    message: WhatsApp client deauthenticated. A new QR will be generated
+                      shortly.
+        '401':
+          description: Missing or invalid bearer token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              example: Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingBearer:
+                  value:
+                    error: 'Unauthorized: Missing Bearer token'
+        '500':
+          description: Failed to deauthenticate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                failure:
+                  value:
+                    error: Failed to deauthenticate client
+  /whatsapp/auth:
+    post:
+      operationId: whatsappAuthQr
+      summary: Get WhatsApp auth QR
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthQrRequest'
+            examples:
+              asciiText:
+                value:
+                  text: true
+              defaultImage:
+                value: {}
+      responses:
+        '200':
+          description: QR returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthQrResponse'
+              examples:
+                image:
+                  value:
+                    mode: image
+                    generatedAt: '2026-02-25T00:00:00.000Z'
+                    qrImageDataUrl: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
+                text:
+                  value:
+                    mode: text
+                    qr: "\u2588\u2588\u2588 ASCII QR \u2588\u2588\u2588"
+                    generatedAt: '2026-02-25T00:00:00.000Z'
+        '401':
+          description: Missing or invalid bearer token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              example: Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingBearer:
+                  value:
+                    error: 'Unauthorized: Missing Bearer token'
+        '400':
+          description: Invalid JSON body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidJson:
+                  value:
+                    error: Invalid JSON body
+        '409':
+          description: Already authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                alreadyAuth:
+                  value:
+                    error: WhatsApp client is already authenticated
+        '503':
+          description: QR not available yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notAvailable:
+                  value:
+                    error: QR is not available yet. Please retry in a few seconds
 components:
   securitySchemes:
     bearerAuth:
@@ -170,8 +295,8 @@ components:
     HealthResponse:
       type: object
       required:
-        - status
-        - whatsappReady
+      - status
+      - whatsappReady
       properties:
         status:
           type: string
@@ -182,8 +307,8 @@ components:
     LoginRequest:
       type: object
       required:
-        - username
-        - password
+      - username
+      - password
       properties:
         username:
           type: string
@@ -194,9 +319,9 @@ components:
     LoginResponse:
       type: object
       required:
-        - token
-        - tokenType
-        - expiresIn
+      - token
+      - tokenType
+      - expiresIn
       properties:
         token:
           type: string
@@ -204,7 +329,7 @@ components:
         tokenType:
           type: string
           enum:
-            - Bearer
+          - Bearer
           example: Bearer
         expiresIn:
           type: integer
@@ -213,13 +338,13 @@ components:
     SendRequest:
       type: object
       required:
-        - to
-        - message
+      - to
+      - message
       properties:
         to:
           type: string
           description: Phone number or WhatsApp chat id (@c.us / @g.us)
-          example: "6281234567890"
+          example: '6281234567890'
         message:
           type: string
           minLength: 1
@@ -227,16 +352,16 @@ components:
     SendResponse:
       type: object
       required:
-        - ok
-        - to
-        - id
+      - ok
+      - to
+      - id
       properties:
         ok:
           type: boolean
           example: true
         to:
           type: string
-          example: "6281234567890@c.us"
+          example: 6281234567890@c.us
         id:
           type: string
           nullable: true
@@ -244,8 +369,48 @@ components:
     ErrorResponse:
       type: object
       required:
-        - error
+      - error
       properties:
         error:
           type: string
           example: Invalid JSON body
+    DeauthResponse:
+      type: object
+      required:
+      - ok
+      - message
+      properties:
+        ok:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: WhatsApp client deauthenticated. A new QR will be generated shortly.
+    AuthQrRequest:
+      type: object
+      properties:
+        text:
+          type: boolean
+          default: false
+          description: Set true to return ASCII QR text. Default returns image URL.
+    AuthQrResponse:
+      type: object
+      required:
+      - mode
+      - generatedAt
+      properties:
+        mode:
+          type: string
+          enum:
+          - image
+          - text
+        qr:
+          type: string
+          nullable: true
+        generatedAt:
+          type: string
+          format: date-time
+        qrImageDataUrl:
+          type: string
+          nullable: true
+          description: Data URL PNG QR image

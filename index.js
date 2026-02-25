@@ -1,4 +1,5 @@
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const { createApiServer, createJwtService } = require('./src/api');
 
@@ -11,6 +12,8 @@ const AUTH_USERNAME = process.env.AUTH_USERNAME || 'admin';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'admin';
 const JWT_TTL_SECONDS = Number(process.env.JWT_TTL_SECONDS || 3600);
 let isClientReady = false;
+let latestQr = null;
+let latestQrAt = null;
 
 if (JWT_SECRET === 'dev-insecure-change-me') {
   console.warn('JWT_SECRET is using default insecure value. Set JWT_SECRET in production.');
@@ -43,11 +46,15 @@ const client = new Client({
 });
 
 client.on('qr', (qr) => {
+  latestQr = qr;
+  latestQrAt = new Date().toISOString();
   qrcode.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
   isClientReady = true;
+  latestQr = null;
+  latestQrAt = null;
   console.log('Client is ready!');
 });
 
@@ -91,6 +98,50 @@ createApiServer({
   jwtIssuer: JWT_ISSUER,
   jwtAudience: JWT_AUDIENCE,
   jwtService,
+  deauthClient: async () => {
+    try {
+      await client.logout();
+    } catch {
+      // ignore logout errors when already unauthenticated/disconnected
+    }
+
+    isClientReady = false;
+    latestQr = null;
+    latestQrAt = null;
+    await client.initialize();
+
+    return { ok: true };
+  },
+  requestAuthQr: async ({ text }) => {
+    if (isClientReady) {
+      throw new Error('WhatsApp client is already authenticated');
+    }
+
+    if (!latestQr) {
+      throw new Error('QR is not available yet. Please retry in a few seconds');
+    }
+
+    if (text) {
+      const asciiQr = await new Promise((resolve) => {
+        qrcode.generate(latestQr, { small: true }, (qrText) => resolve(qrText));
+      });
+
+      return {
+        mode: 'text',
+        qr: asciiQr,
+        generatedAt: latestQrAt,
+      };
+    }
+
+    return {
+      mode: 'image',
+      qrImageDataUrl: await QRCode.toDataURL(latestQr, {
+        width: 300,
+        margin: 1,
+      }),
+      generatedAt: latestQrAt,
+    };
+  },
 });
 
 client.initialize();

@@ -45,6 +45,7 @@ function invoke(handler, { method, url, headers = {}, body }) {
 test('login and send flow with jwt auth', async () => {
   const sentMessages = [];
   let ready = true;
+  let deauthCalled = false;
   const jwtService = createJwtService({
     jwtSecret: 'integration-secret',
     jwtIssuer: 'bowas',
@@ -63,6 +64,24 @@ test('login and send flow with jwt auth', async () => {
     jwtIssuer: 'bowas',
     jwtAudience: 'clients',
     jwtService,
+    deauthClient: async () => {
+      deauthCalled = true;
+    },
+    requestAuthQr: async ({ text }) => {
+      if (text) {
+        return {
+          mode: 'text',
+          qr: 'ASCII_QR',
+          generatedAt: '2026-02-25T00:00:00.000Z',
+        };
+      }
+
+      return {
+        mode: 'image',
+        qrImageDataUrl: 'data:image/png;base64,AAAA',
+        generatedAt: '2026-02-25T00:00:00.000Z',
+      };
+    },
   });
 
   const badLogin = await invoke(handler, {
@@ -97,6 +116,36 @@ test('login and send flow with jwt auth', async () => {
   assert.equal(send.body.ok, true);
   assert.equal(sentMessages.length, 1);
   assert.deepEqual(sentMessages[0], { to: '6281234567890@c.us', message: 'hello' });
+
+  const authQrImage = await invoke(handler, {
+    method: 'POST',
+    url: '/whatsapp/auth',
+    headers: { authorization: `Bearer ${login.body.token}` },
+    body: {},
+  });
+  assert.equal(authQrImage.status, 200);
+  assert.equal(authQrImage.body.mode, 'image');
+  assert.equal(typeof authQrImage.body.qrImageDataUrl, 'string');
+
+  const authQrText = await invoke(handler, {
+    method: 'POST',
+    url: '/whatsapp/auth',
+    headers: { authorization: `Bearer ${login.body.token}` },
+    body: { text: true },
+  });
+  assert.equal(authQrText.status, 200);
+  assert.equal(authQrText.body.mode, 'text');
+  assert.equal(authQrText.body.qr, 'ASCII_QR');
+
+  const deauth = await invoke(handler, {
+    method: 'POST',
+    url: '/whatsapp/deauth',
+    headers: { authorization: `Bearer ${login.body.token}` },
+    body: {},
+  });
+  assert.equal(deauth.status, 200);
+  assert.equal(deauth.body.ok, true);
+  assert.equal(deauthCalled, true);
 
   ready = false;
   const notReady = await invoke(handler, {
