@@ -20,7 +20,7 @@ A minimal WhatsApp bot built with `whatsapp-web.js`.
 ## Local run (nvm)
 
 ```bash
-cd /home/$USER/termibot
+cd /home/$USER/bowas
 source ./projectrc
 make start
 ```
@@ -52,7 +52,7 @@ curl http://localhost:3001/health
 ## Docker run
 
 ```bash
-cd /home/$USER/termibot
+cd /home/$USER/bowas
 make docker-up
 make docker-logs
 ```
@@ -68,6 +68,27 @@ Optional explicit build:
 ```bash
 make docker-build
 ```
+
+
+## Sync to personal BOWAS API
+
+Add only missing endpoint files from the current OpenAPI spec into `/home/$USER/personal/BOWAS API/`:
+
+```bash
+make sync-personal-api TARGET_DIR="/home/$USER/personal/BOWAS API"
+```
+
+Direct script usage (optional custom paths):
+
+```bash
+python3 ./scripts/sync_personal_bowas_api.py --openapi-json ./openapi.json --target-dir "/home/$USER/personal/BOWAS API"
+```
+
+Behavior:
+
+- Diff-only add: creates missing endpoint `.yml` files
+- Does not overwrite existing collection files
+- Prints added files or `No diff to add` when already in sync
 
 ## Project files
 
