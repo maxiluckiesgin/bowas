@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: BOWAS API
+  version: 1.0.0
+  description: |
+    REST API for WhatsApp messaging via `whatsapp-web.js`.
+    Authentication flow:
+    1. Call `/login` with username/password.
+    2. Use returned JWT as Bearer token for `/send`.
+servers:
+  - url: http://localhost:3000
+    description: Local default
+  - url: http://localhost:3001
+    description: Local alternate port
+tags:
+  - name: System
+  - name: Auth
+  - name: Messaging
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Returns API liveness and WhatsApp client readiness.
+      responses:
+        '200':
+          description: Successful health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ready:
+                  value:
+                    status: ok
+                    whatsappReady: true
+                notReady:
+                  value:
+                    status: ok
+                    whatsappReady: false
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Login and get JWT token
+      description: |
+        Validates username/password and returns a JWT (HS256).
+        Token must be sent as `Authorization: Bearer <token>` for `/send`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              defaultCredentials:
+                value:
+                  username: admin
+                  password: admin
+      responses:
+        '200':
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  value:
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    tokenType: Bearer
+                    expiresIn: 3600
+        '400':
+          description: Invalid JSON body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidJson:
+                  value:
+                    error: Invalid JSON body
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  value:
+                    error: Invalid username or password
+
+  /send:
+    post:
+      tags: [Messaging]
+      summary: Send message
+      description: Sends a text message through WhatsApp.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendRequest'
+            examples:
+              numericPhone:
+                value:
+                  to: "6281234567890"
+                  message: "hello from api"
+              explicitChatId:
+                value:
+                  to: "6281234567890@c.us"
+                  message: "hello explicit chat id"
+      responses:
+        '200':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendResponse'
+              examples:
+                success:
+                  value:
+                    ok: true
+                    to: "6281234567890@c.us"
+                    id: "ABGGFlA5FpafAgo6EhQ2M2Iw..."
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingFields:
+                  value:
+                    error: Required fields: to, message
+                invalidJson:
+                  value:
+                    error: Invalid JSON body
+        '401':
+          description: Missing/invalid token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingBearer:
+                  value:
+                    error: Unauthorized: Missing Bearer token
+                invalidSignature:
+                  value:
+                    error: Unauthorized: Invalid signature
+        '503':
+          description: WhatsApp client not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notReady:
+                  value:
+                    error: WhatsApp client is not ready yet
+        '500':
+          description: Upstream send failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidTarget:
+                  value:
+                    error: "No LID for user\nnew Error (<anonymous>:6:31)"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, whatsappReady]
+      properties:
+        status:
+          type: string
+          example: ok
+        whatsappReady:
+          type: boolean
+          example: true
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          example: admin
+
+    LoginResponse:
+      type: object
+      required: [token, tokenType, expiresIn]
+      properties:
+        token:
+          type: string
+          description: JWT token (HS256)
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Token validity in seconds
+          example: 3600
+
+    SendRequest:
+      type: object
+      required: [to, message]
+      properties:
+        to:
+          type: string
+          description: |
+            Recipient target.
+            Supported forms:
+            - plain phone number (e.g. 6281234567890)
+            - WhatsApp chat id ending with @c.us or @g.us
+          example: "6281234567890"
+        message:
+          type: string
+          minLength: 1
+          example: hello from api
+
+    SendResponse:
+      type: object
+      required: [ok, to, id]
+      properties:
+        ok:
+          type: boolean
+          example: true
+        to:
+          type: string
+          example: "6281234567890@c.us"
+        id:
+          type: string
+          nullable: true
+          example: "ABGGFlA5FpafAgo6EhQ2M2Iw..."
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Invalid JSON body

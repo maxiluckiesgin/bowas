@@ -1,0 +1,15 @@
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+
+if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+  echo "projectrc: nvm not found at $NVM_DIR/nvm.sh" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+. "$NVM_DIR/nvm.sh"
+
+if ! command -v nvm >/dev/null 2>&1; then
+  echo "projectrc: nvm failed to load" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+nvm use

@@ -1,0 +1,27 @@
+name: bowas
+
+services:
+  bowas:
+    build: .
+    container_name: bowas
+    restart: unless-stopped
+    environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - PUPPETEER_HEADLESS=true
+      - WWEBJS_AUTH_PATH=/app/.wwebjs_auth
+      - WWEBJS_CLIENT_ID=docker
+      - JWT_SECRET=${JWT_SECRET:-dev-insecure-change-me}
+      - JWT_ISSUER=${JWT_ISSUER:-}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-}
+      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-admin}
+      - JWT_TTL_SECONDS=${JWT_TTL_SECONDS:-3600}
+    volumes:
+      - ./.wwebjs_auth:/app/.wwebjs_auth
+      - ./.wwebjs_cache:/app/.wwebjs_cache
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    command: >
+      sh -lc "rm -f /app/.wwebjs_auth/session-docker/SingletonLock
+      /app/.wwebjs_auth/session-docker/SingletonCookie
+      /app/.wwebjs_auth/session-docker/SingletonSocket && npm start"
