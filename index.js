@@ -1,4 +1,3 @@
-const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const { createApiServer, createJwtService } = require('./src/api');
@@ -48,7 +47,7 @@ const client = new Client({
 client.on('qr', (qr) => {
   latestQr = qr;
   latestQrAt = new Date().toISOString();
-  qrcode.generate(qr, { small: true });
+  console.log('WhatsApp QR generated. Fetch it via POST /whatsapp/auth');
 });
 
 client.on('ready', () => {
@@ -122,8 +121,9 @@ createApiServer({
     }
 
     if (text) {
-      const asciiQr = await new Promise((resolve) => {
-        qrcode.generate(latestQr, { small: true }, (qrText) => resolve(qrText));
+      const asciiQr = await QRCode.toString(latestQr, {
+        type: 'terminal',
+        small: true,
       });
 
       return {

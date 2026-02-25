@@ -25,7 +25,7 @@ source ./projectrc
 make start
 ```
 
-On first run, scan the QR in terminal. Session is stored in `.wwebjs_auth/`.
+Authenticate via API: call `POST /whatsapp/auth` to fetch QR (ASCII with `{ "text": true }` or image by default). Session is stored in `.wwebjs_auth/`.
 
 Example REST calls (local):
 
