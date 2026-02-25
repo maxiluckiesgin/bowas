@@ -13,3 +13,9 @@ if ! command -v nvm >/dev/null 2>&1; then
 fi
 
 nvm use
+
+if [ -f ./.env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
