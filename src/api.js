@@ -9,6 +9,20 @@ function sendJson(res, statusCode, payload, extraHeaders = {}) {
   res.end(JSON.stringify(payload));
 }
 
+function sendHtml(res, statusCode, html, extraHeaders = {}) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'text/html; charset=utf-8',
+    ...extraHeaders,
+  });
+  res.end(html);
+}
+
+function isTruthyQueryParam(value) {
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes';
+}
+
 function decodeBase64UrlToJson(value) {
   try {
     const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -146,14 +160,17 @@ function createApiHandler(config) {
   } = config;
 
   return async (req, res) => {
-    if (req.method === 'GET' && req.url === '/health') {
+    const requestUrl = new URL(req.url || '/', 'http://localhost');
+    const pathname = requestUrl.pathname;
+
+    if (req.method === 'GET' && pathname === '/health') {
       return sendJson(res, 200, {
         status: 'ok',
         whatsappReady: getIsClientReady(),
       });
     }
 
-    if (req.method === 'POST' && req.url === '/login') {
+    if (req.method === 'POST' && pathname === '/login') {
       let body;
       try {
         body = await readJsonBody(req);
@@ -185,7 +202,7 @@ function createApiHandler(config) {
       });
     }
 
-    if (req.method === 'POST' && req.url === '/send') {
+    if (req.method === 'POST' && pathname === '/send') {
       const auth = jwtService.authenticateRequest(req);
       if (!auth.ok) {
         return sendJson(
@@ -228,7 +245,7 @@ function createApiHandler(config) {
       }
     }
 
-    if (req.method === 'POST' && req.url === '/whatsapp/deauth') {
+    if (req.method === 'POST' && pathname === '/whatsapp/deauth') {
       const auth = jwtService.authenticateRequest(req);
       if (!auth.ok) {
         return sendJson(
@@ -256,7 +273,7 @@ function createApiHandler(config) {
       }
     }
 
-    if (req.method === 'POST' && req.url === '/whatsapp/auth') {
+    if (req.method === 'POST' && pathname === '/whatsapp/auth') {
       const auth = jwtService.authenticateRequest(req);
       if (!auth.ok) {
         return sendJson(
@@ -267,19 +284,45 @@ function createApiHandler(config) {
         );
       }
 
-      let body;
-      try {
-        body = await readJsonBody(req);
-      } catch {
-        return sendJson(res, 400, { error: 'Invalid JSON body' });
-      }
-
       if (typeof requestAuthQr !== 'function') {
         return sendJson(res, 500, { error: 'Auth QR request is not configured' });
       }
 
+      const text = isTruthyQueryParam(requestUrl.searchParams.get('text'));
+      const html = isTruthyQueryParam(requestUrl.searchParams.get('html'));
+
       try {
-        const result = await requestAuthQr({ text: body.text === true });
+        const result = await requestAuthQr({ text });
+
+        if (html) {
+          const qrImageDataUrl = result?.qrImageDataUrl;
+          if (typeof qrImageDataUrl !== 'string' || !qrImageDataUrl.startsWith('data:image/')) {
+            return sendJson(res, 400, {
+              error: 'HTML mode requires image QR. Use html=true without text=true',
+            });
+          }
+
+          const generatedAt = result.generatedAt ? String(result.generatedAt) : '';
+          const generatedAtHtml = generatedAt
+            ? `<p><strong>Generated at:</strong> ${generatedAt}</p>`
+            : '';
+          const htmlPage = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WhatsApp Auth QR</title>
+  </head>
+  <body>
+    <h1>WhatsApp Auth QR</h1>
+    ${generatedAtHtml}
+    <img src="${qrImageDataUrl}" alt="WhatsApp Auth QR" />
+  </body>
+</html>`;
+
+          return sendHtml(res, 200, htmlPage);
+        }
+
         return sendJson(res, 200, result);
       } catch (err) {
         const message = err?.message || 'Failed to get auth QR';

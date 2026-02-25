@@ -347,26 +347,28 @@
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthQrRequest"
-              },
-              "examples": {
-                "asciiText": {
-                  "value": {
-                    "text": true
-                  }
-                },
-                "defaultImage": {
-                  "value": {}
-                }
-              }
-            }
+        "parameters": [
+          {
+            "in": "query",
+            "name": "text",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set `true` to return ASCII QR text in JSON response."
+          },
+          {
+            "in": "query",
+            "name": "html",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set `true` to return an HTML page containing QR image."
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "QR returned",
@@ -386,9 +388,19 @@
                   "text": {
                     "value": {
                       "mode": "text",
-                      "qr": "\u2588\u2588\u2588 ASCII QR \u2588\u2588\u2588",
+                      "qr": "███ ASCII QR ███",
                       "generatedAt": "2026-02-25T00:00:00.000Z"
                     }
+                  }
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "htmlPage": {
+                    "value": "<!doctype html><html><body><img src=\"data:image/png;base64,...\" /></body></html>"
                   }
                 }
               }
@@ -420,16 +432,16 @@
             }
           },
           "400": {
-            "description": "Invalid JSON body",
+            "description": "Invalid query combination",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 },
                 "examples": {
-                  "invalidJson": {
+                  "invalidCombination": {
                     "value": {
-                      "error": "Invalid JSON body"
+                      "error": "HTML mode requires image QR. Use html=true without text=true"
                     }
                   }
                 }
@@ -611,16 +623,6 @@
           "message": {
             "type": "string",
             "example": "WhatsApp client deauthenticated. A new QR will be generated shortly."
-          }
-        }
-      },
-      "AuthQrRequest": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "boolean",
-            "default": false,
-            "description": "Set true to return ASCII QR text. Default returns image URL."
           }
         }
       },

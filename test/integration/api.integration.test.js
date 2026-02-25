@@ -121,7 +121,6 @@ test('login and send flow with jwt auth', async () => {
     method: 'POST',
     url: '/whatsapp/auth',
     headers: { authorization: `Bearer ${login.body.token}` },
-    body: {},
   });
   assert.equal(authQrImage.status, 200);
   assert.equal(authQrImage.body.mode, 'image');
@@ -129,13 +128,22 @@ test('login and send flow with jwt auth', async () => {
 
   const authQrText = await invoke(handler, {
     method: 'POST',
-    url: '/whatsapp/auth',
+    url: '/whatsapp/auth?text=true',
     headers: { authorization: `Bearer ${login.body.token}` },
-    body: { text: true },
   });
   assert.equal(authQrText.status, 200);
   assert.equal(authQrText.body.mode, 'text');
   assert.equal(authQrText.body.qr, 'ASCII_QR');
+
+  const authQrHtml = await invoke(handler, {
+    method: 'POST',
+    url: '/whatsapp/auth?html=true',
+    headers: { authorization: `Bearer ${login.body.token}` },
+  });
+  assert.equal(authQrHtml.status, 200);
+  assert.equal(authQrHtml.body, null);
+  assert.match(authQrHtml.headers['Content-Type'] || authQrHtml.headers['content-type'], /text\/html/i);
+  assert.match(authQrHtml.raw, /<img src="data:image\/png;base64,AAAA"/);
 
   const deauth = await invoke(handler, {
     method: 'POST',
