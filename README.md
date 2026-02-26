@@ -1,11 +1,27 @@
 # BOWAS
 
-A minimal WhatsApp bot built with `whatsapp-web.js`.
+Bright, fast, and no-nonsense WhatsApp automation with a clean API and a tiny frontend console.
+
+## Quickstart
+
+```bash
+cd /home/$USER/bowas
+make docker-up
+```
+
+Open the UI at `http://localhost:8013` (or your `FRONTEND_PORT`).
+
+## Superpowers
+
+- Instant auto-replies with exact-match rules
+- JWT-protected API for send + rule management
+- QR auth as image, text, or HTML
+- Frontend console with inline rule edits
 
 ## Current behavior
 
-- If an incoming message contains `hello` (case-insensitive), the bot replies with `world`.
-- Exposes a REST API:
+- If an incoming message exactly matches `hello`, the bot replies with `world` (auto-reply rules are configurable).
+- REST API endpoints:
   - `GET /health`
   - `POST /login` with JSON `{ "username": "...", "password": "..." }`
   - `POST /send` with JSON `{ "to": "...", "message": "..." }`
@@ -30,8 +46,7 @@ make start
 
 Authenticate via API: call `POST /whatsapp/auth` to fetch QR (ASCII with `?text=true`, HTML page with image via `?html=true`, or image JSON by default). Session is stored in `.wwebjs_auth/`.
 
-Auto-reply rules are exact-match, one-reply, global, and ignore group chats.
-Rules are persisted to sqlite (`AUTOREPLY_DB_PATH`) and stored under `./data/` by default.
+Auto-reply rules are exact-match, one-reply, global, and ignore group chats. Rules are persisted to sqlite (`AUTOREPLY_DB_PATH`) and stored under `./data/` by default.
 
 Example REST calls (local):
 
@@ -89,9 +104,9 @@ Docker (served on `FRONTEND_PORT`, default `8080`):
 
 ```bash
 FRONTEND_PORT=8080 make docker-up
+```
 
 When using Docker, the frontend proxies `/api/*` to the backend service over the internal Docker network.
-```
 
 
 ## Sync to personal BOWAS API
