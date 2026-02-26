@@ -13,6 +13,8 @@ make docker-up
 make docker-logs
 ```
 
+Frontend is served on `FRONTEND_PORT` (default `8080`). It proxies `/api/*` to the backend service over the internal Docker network.
+
 On first run, scan the QR shown in logs.
 
 REST API is exposed on `localhost:${HOST_PORT:-3000}`.

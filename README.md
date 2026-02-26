@@ -69,6 +69,24 @@ Optional explicit build:
 make docker-build
 ```
 
+## Frontend (vanilla JS + Tailwind)
+
+Local dev (separate package):
+
+```bash
+cd /home/$USER/bowas/frontend
+npm install
+npm run dev
+```
+
+Docker (served on `FRONTEND_PORT`, default `8080`):
+
+```bash
+FRONTEND_PORT=8080 make docker-up
+
+When using Docker, the frontend proxies `/api/*` to the backend service over the internal Docker network.
+```
+
 
 ## Sync to personal BOWAS API
 

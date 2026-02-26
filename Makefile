@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: start docker-build docker-up docker-down docker-logs
+.PHONY: start docker-build docker-up docker-down docker-logs frontend-install frontend-dev
 start:
 	@source ./projectrc && node index.js
 
@@ -27,6 +27,12 @@ docker-down:
 
 docker-logs:
 	@docker compose logs -f bowas
+
+frontend-install:
+	@cd frontend && npm install
+
+frontend-dev:
+	@cd frontend && npm run dev
 
 .PHONY: sync-personal-api
 OPENAPI_JSON ?= ./openapi.json

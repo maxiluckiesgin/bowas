@@ -157,17 +157,34 @@ function createApiHandler(config) {
     jwtService,
     deauthClient,
     requestAuthQr,
+    corsOrigin,
   } = config;
 
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': corsOrigin || '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
   return async (req, res) => {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, corsHeaders);
+      return res.end();
+    }
+
     const requestUrl = new URL(req.url || '/', 'http://localhost');
     const pathname = requestUrl.pathname;
 
     if (req.method === 'GET' && pathname === '/health') {
-      return sendJson(res, 200, {
+      return sendJson(
+        res,
+        200,
+        {
         status: 'ok',
         whatsappReady: getIsClientReady(),
-      });
+        },
+        corsHeaders
+      );
     }
 
     if (req.method === 'POST' && pathname === '/login') {
@@ -175,13 +192,13 @@ function createApiHandler(config) {
       try {
         body = await readJsonBody(req);
       } catch {
-        return sendJson(res, 400, { error: 'Invalid JSON body' });
+        return sendJson(res, 400, { error: 'Invalid JSON body' }, corsHeaders);
       }
 
       const username = typeof body.username === 'string' ? body.username : '';
       const password = typeof body.password === 'string' ? body.password : '';
       if (username !== authUsername || password !== authPassword) {
-        return sendJson(res, 401, { error: 'Invalid username or password' });
+        return sendJson(res, 401, { error: 'Invalid username or password' }, corsHeaders);
       }
 
       const now = Math.floor(Date.now() / 1000);
@@ -195,11 +212,16 @@ function createApiHandler(config) {
       if (config.jwtAudience) payload.aud = config.jwtAudience;
 
       const token = jwtService.signJwt(payload);
-      return sendJson(res, 200, {
+      return sendJson(
+        res,
+        200,
+        {
         token,
         tokenType: 'Bearer',
         expiresIn: jwtTtlSeconds,
-      });
+        },
+        corsHeaders
+      );
     }
 
     if (req.method === 'POST' && pathname === '/send') {
@@ -209,7 +231,7 @@ function createApiHandler(config) {
           res,
           401,
           { error: `Unauthorized: ${auth.reason}` },
-          { 'WWW-Authenticate': 'Bearer' }
+          { ...corsHeaders, 'WWW-Authenticate': 'Bearer' }
         );
       }
 
@@ -217,31 +239,36 @@ function createApiHandler(config) {
       try {
         body = await readJsonBody(req);
       } catch {
-        return sendJson(res, 400, { error: 'Invalid JSON body' });
+        return sendJson(res, 400, { error: 'Invalid JSON body' }, corsHeaders);
       }
 
       const chatId = normalizeChatId(body.to);
       const text = typeof body.message === 'string' ? body.message.trim() : '';
 
       if (!chatId || !text) {
-        return sendJson(res, 400, { error: 'Required fields: to, message' });
+        return sendJson(res, 400, { error: 'Required fields: to, message' }, corsHeaders);
       }
 
       if (!getIsClientReady()) {
-        return sendJson(res, 503, { error: 'WhatsApp client is not ready yet' });
+        return sendJson(res, 503, { error: 'WhatsApp client is not ready yet' }, corsHeaders);
       }
 
       try {
         const sent = await sendMessage(chatId, text);
-        return sendJson(res, 200, {
+        return sendJson(
+          res,
+          200,
+          {
           ok: true,
           to: chatId,
           id: sent?.id?._serialized || null,
-        });
+          },
+          corsHeaders
+        );
       } catch (err) {
         return sendJson(res, 500, {
           error: err?.message || 'Failed to send message',
-        });
+        }, corsHeaders);
       }
     }
 
@@ -252,24 +279,29 @@ function createApiHandler(config) {
           res,
           401,
           { error: `Unauthorized: ${auth.reason}` },
-          { 'WWW-Authenticate': 'Bearer' }
+          { ...corsHeaders, 'WWW-Authenticate': 'Bearer' }
         );
       }
 
       if (typeof deauthClient !== 'function') {
-        return sendJson(res, 500, { error: 'Deauth is not configured' });
+        return sendJson(res, 500, { error: 'Deauth is not configured' }, corsHeaders);
       }
 
       try {
         await deauthClient();
-        return sendJson(res, 200, {
+        return sendJson(
+          res,
+          200,
+          {
           ok: true,
           message: 'WhatsApp client deauthenticated. A new QR will be generated shortly.',
-        });
+          },
+          corsHeaders
+        );
       } catch (err) {
         return sendJson(res, 500, {
           error: err?.message || 'Failed to deauthenticate client',
-        });
+        }, corsHeaders);
       }
     }
 
@@ -280,12 +312,12 @@ function createApiHandler(config) {
           res,
           401,
           { error: `Unauthorized: ${auth.reason}` },
-          { 'WWW-Authenticate': 'Bearer' }
+          { ...corsHeaders, 'WWW-Authenticate': 'Bearer' }
         );
       }
 
       if (typeof requestAuthQr !== 'function') {
-        return sendJson(res, 500, { error: 'Auth QR request is not configured' });
+        return sendJson(res, 500, { error: 'Auth QR request is not configured' }, corsHeaders);
       }
 
       const text = isTruthyQueryParam(requestUrl.searchParams.get('text'));
@@ -299,7 +331,7 @@ function createApiHandler(config) {
           if (typeof qrImageDataUrl !== 'string' || !qrImageDataUrl.startsWith('data:image/')) {
             return sendJson(res, 400, {
               error: 'HTML mode requires image QR. Use html=true without text=true',
-            });
+            }, corsHeaders);
           }
 
           const generatedAt = result.generatedAt ? String(result.generatedAt) : '';
@@ -323,15 +355,15 @@ function createApiHandler(config) {
           return sendHtml(res, 200, htmlPage);
         }
 
-        return sendJson(res, 200, result);
+        return sendJson(res, 200, result, corsHeaders);
       } catch (err) {
         const message = err?.message || 'Failed to get auth QR';
         const statusCode = message.includes('already authenticated') ? 409 : 503;
-        return sendJson(res, statusCode, { error: message });
+        return sendJson(res, statusCode, { error: message }, corsHeaders);
       }
     }
 
-    return sendJson(res, 404, { error: 'Not found' });
+    return sendJson(res, 404, { error: 'Not found' }, corsHeaders);
   };
 }
 

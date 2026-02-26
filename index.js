@@ -10,6 +10,7 @@ const JWT_AUDIENCE = process.env.JWT_AUDIENCE || '';
 const AUTH_USERNAME = process.env.AUTH_USERNAME || 'admin';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'admin';
 const JWT_TTL_SECONDS = Number(process.env.JWT_TTL_SECONDS || 3600);
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 let isClientReady = false;
 let latestQr = null;
 let latestQrAt = null;
@@ -97,6 +98,7 @@ createApiServer({
   jwtIssuer: JWT_ISSUER,
   jwtAudience: JWT_AUDIENCE,
   jwtService,
+  corsOrigin: CORS_ORIGIN,
   deauthClient: async () => {
     try {
       await client.logout();

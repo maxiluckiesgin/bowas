@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOWAS Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="mx-auto max-w-5xl px-6 py-10">
+      <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 class="text-3xl font-semibold">BOWAS Console</h1>
+          <p class="text-slate-300">Login, fetch QR, and send messages from a clean web UI.</p>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900 px-4 py-3 text-sm">
+          <div class="text-slate-400">API Base</div>
+          <div class="font-mono" id="apiBaseDisplay"></div>
+        </div>
+      </header>
+
+      <section class="mt-10 grid gap-6 md:grid-cols-2">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-6">
+          <h2 class="text-lg font-semibold">Auth</h2>
+          <p class="mt-1 text-sm text-slate-400">Store your JWT token after login.</p>
+          <div class="mt-4 grid gap-3">
+            <input id="username" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Username" />
+            <input id="password" type="password" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Password" />
+            <button id="loginBtn" class="rounded-md bg-emerald-500 px-4 py-2 font-semibold text-slate-950">Login</button>
+            <textarea id="token" rows="3" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" placeholder="JWT token will appear here..."></textarea>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-6">
+          <h2 class="text-lg font-semibold">WhatsApp QR</h2>
+          <p class="mt-1 text-sm text-slate-400">Fetch QR as image, text, or HTML.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="qrImageBtn" class="rounded-md bg-indigo-500 px-4 py-2 font-semibold text-white">Image</button>
+            <button id="qrTextBtn" class="rounded-md bg-slate-700 px-4 py-2 font-semibold text-white">Text</button>
+            <button id="qrHtmlBtn" class="rounded-md bg-slate-700 px-4 py-2 font-semibold text-white">HTML</button>
+          </div>
+          <div class="mt-4 rounded-md border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300">
+            <pre id="qrText" class="whitespace-pre-wrap"></pre>
+            <img id="qrImage" class="mt-3 max-w-full rounded-md hidden" alt="QR" />
+            <iframe id="qrHtml" class="mt-3 h-64 w-full rounded-md border border-slate-800 bg-white hidden" title="QR HTML"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-6">
+        <h2 class="text-lg font-semibold">Send Message</h2>
+        <p class="mt-1 text-sm text-slate-400">Send a WhatsApp message via API.</p>
+        <div class="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto]">
+          <input id="to" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Phone or chat id" />
+          <input id="message" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Message" />
+          <button id="sendBtn" class="rounded-md bg-emerald-500 px-4 py-2 font-semibold text-slate-950">Send</button>
+        </div>
+        <div class="mt-4 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-300">
+          <pre id="sendResult" class="whitespace-pre-wrap"></pre>
+        </div>
+      </section>
+
+      <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-6">
+        <h2 class="text-lg font-semibold">API Base URL</h2>
+        <p class="mt-1 text-sm text-slate-400">Override for local or dockerized environments.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <input id="apiBase" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 md:flex-1" placeholder="http://localhost:3000" />
+          <button id="saveBaseBtn" class="rounded-md bg-slate-700 px-4 py-2 font-semibold text-white">Save</button>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
