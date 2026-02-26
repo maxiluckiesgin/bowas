@@ -123,6 +123,7 @@ def main():
     paths = doc.get('paths', {})
 
     existing = set()
+    existing_files = {}
     max_seq = 0
 
     for yml in target_dir.glob('*.yml'):
@@ -142,9 +143,12 @@ def main():
         method = str(http.get('method', '')).upper()
         url = str(http.get('url', ''))
         if method and url:
-            existing.add((method, url))
+            key = (method, url)
+            existing.add(key)
+            existing_files[key] = (yml, seq if isinstance(seq, int) else None)
 
     added = []
+    updated = []
     next_seq = max_seq + 1
 
     for path, methods in paths.items():
@@ -153,24 +157,28 @@ def main():
             url = f"{{{{baseUrl}}}}{path}"
             key = (m, url)
 
-            if key in existing:
-                continue
-
             name = operation.get('summary') or operation.get('operationId') or f'{m} {path}'
-            file_name = sanitize_filename(name) + '.yml'
-            file_path = target_dir / file_name
 
-            i = 2
-            while file_path.exists():
-                file_path = target_dir / (sanitize_filename(name) + f' ({i}).yml')
-                i += 1
+            existing_entry = existing_files.get(key)
+            if existing_entry:
+                file_path, existing_seq = existing_entry
+                seq_value = existing_seq if existing_seq is not None else next_seq
+            else:
+                file_name = sanitize_filename(name) + '.yml'
+                file_path = target_dir / file_name
+
+                i = 2
+                while file_path.exists():
+                    file_path = target_dir / (sanitize_filename(name) + f' ({i}).yml')
+                    i += 1
+                seq_value = next_seq
 
             req_body = request_body_from_operation(operation)
             security = operation.get('security', []) or []
             bearer = any('bearerAuth' in sec for sec in security if isinstance(sec, dict))
 
             doc_out = {
-                'info': {'name': name, 'type': 'http', 'seq': next_seq},
+                'info': {'name': name, 'type': 'http', 'seq': seq_value},
                 'http': {'method': m, 'url': url},
                 'settings': {
                     'encodeUrl': True,
@@ -212,15 +220,24 @@ def main():
             yaml_text = yaml_text.replace("token: '{{token}}'", 'token: "{{token}}"')
 
             file_path.write_text(yaml_text, encoding='utf-8')
-            added.append(str(file_path))
-            existing.add(key)
-            next_seq += 1
+            if existing_entry:
+                updated.append(str(file_path))
+            else:
+                added.append(str(file_path))
+                existing.add(key)
+                next_seq += 1
 
     if added:
         print('Added files:')
         for p in added:
             print('-', p)
-    else:
+
+    if updated:
+        print('Updated files:')
+        for p in updated:
+            print('-', p)
+
+    if not added and not updated:
         print('No diff to add. Collection already up to date.')
 
     return 0
