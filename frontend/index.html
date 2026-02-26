@@ -61,20 +61,46 @@
       </section>
 
       <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-6">
-        <h2 class="text-lg font-semibold">Auto Reply Rules</h2>
-        <p class="mt-1 text-sm text-slate-400">Exact match rules. One reply per message. Group chats ignored.</p>
+        <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">Auto Reply Rules</h2>
+            <p class="mt-1 text-sm text-slate-400">Exact match rules. One reply per message. Group chats ignored.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div class="relative">
+              <input id="ruleSearch" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 pr-8 text-sm" placeholder="Search rules" />
+              <button id="clearSearchBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200" aria-label="Clear search" type="button">×</button>
+            </div>
+          </div>
+        </div>
+
         <div class="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <input id="ruleMatch" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Match text (exact)" />
-          <input id="ruleReply" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Reply text" />
-          <button id="addRuleBtn" class="rounded-md bg-indigo-500 px-4 py-2 font-semibold text-white">Add / Update</button>
+          <input id="newMatch" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Match text (exact)" />
+          <input id="newReply" class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Reply text" />
+          <button id="addRuleBtn" class="rounded-md bg-indigo-500 px-4 py-2 font-semibold text-white">Add</button>
         </div>
-        <div class="mt-4 rounded-md border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300">
-          <pre id="rulesList" class="whitespace-pre-wrap"></pre>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="refreshRulesBtn" class="rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white">Refresh</button>
+          <button id="deleteSelectedBtn" class="rounded-md bg-rose-500 px-4 py-2 text-sm font-semibold text-white">Delete Selected</button>
         </div>
-        <div class="mt-3 flex gap-2">
-          <button id="refreshRulesBtn" class="rounded-md bg-slate-700 px-4 py-2 font-semibold text-white">Refresh</button>
-          <button id="deleteRuleBtn" class="rounded-md bg-slate-700 px-4 py-2 font-semibold text-white">Delete Match</button>
+
+        <div class="mt-4 rounded-md border border-slate-800 bg-slate-950">
+          <div class="max-h-80 overflow-y-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="sticky top-0 bg-slate-900 text-slate-300">
+                <tr>
+                  <th class="px-3 py-2">Select</th>
+                  <th class="px-3 py-2">Match</th>
+                  <th class="px-3 py-2">Reply</th>
+                  <th class="px-3 py-2">Action</th>
+                </tr>
+              </thead>
+              <tbody id="rulesTable" class="text-slate-200"></tbody>
+            </table>
+          </div>
         </div>
+        <div id="rulesStatus" class="mt-2 text-xs text-slate-400"></div>
       </section>
 
       <section class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-6">
