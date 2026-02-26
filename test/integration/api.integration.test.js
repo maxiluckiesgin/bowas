@@ -82,6 +82,9 @@ test('login and send flow with jwt auth', async () => {
         generatedAt: '2026-02-25T00:00:00.000Z',
       };
     },
+    getAutoReplyRules: () => [{ match: 'hello', reply: 'world' }],
+    addAutoReplyRule: ({ match, reply }) => ({ match, reply }),
+    removeAutoReplyRule: (match) => match === 'hello',
   });
 
   const badLogin = await invoke(handler, {
@@ -144,6 +147,28 @@ test('login and send flow with jwt auth', async () => {
   assert.equal(authQrHtml.body, null);
   assert.match(authQrHtml.headers['Content-Type'] || authQrHtml.headers['content-type'], /text\/html/i);
   assert.match(authQrHtml.raw, /<img src="data:image\/png;base64,AAAA"/);
+
+  const rules = await invoke(handler, {
+    method: 'GET',
+    url: '/autoreply/rules',
+  });
+  assert.equal(rules.status, 200);
+  assert.equal(rules.body.rules.length, 1);
+
+  const addRule = await invoke(handler, {
+    method: 'POST',
+    url: '/autoreply/rules',
+    headers: { authorization: `Bearer ${login.body.token}` },
+    body: { match: 'ping', reply: 'pong' },
+  });
+  assert.equal(addRule.status, 200);
+
+  const deleteRule = await invoke(handler, {
+    method: 'DELETE',
+    url: '/autoreply/rules?match=hello',
+    headers: { authorization: `Bearer ${login.body.token}` },
+  });
+  assert.equal(deleteRule.status, 200);
 
   const deauth = await invoke(handler, {
     method: 'POST',

@@ -9,6 +9,9 @@ A minimal WhatsApp bot built with `whatsapp-web.js`.
   - `GET /health`
   - `POST /login` with JSON `{ "username": "...", "password": "..." }`
   - `POST /send` with JSON `{ "to": "...", "message": "..." }`
+  - `GET /autoreply/rules`
+  - `POST /autoreply/rules` with JSON `{ "match": "...", "reply": "..." }`
+  - `DELETE /autoreply/rules?match=...`
   - `POST /send` requires `Authorization: Bearer <jwt>`
 
 ## Requirements
@@ -26,6 +29,8 @@ make start
 ```
 
 Authenticate via API: call `POST /whatsapp/auth` to fetch QR (ASCII with `?text=true`, HTML page with image via `?html=true`, or image JSON by default). Session is stored in `.wwebjs_auth/`.
+
+Auto-reply rules are exact-match, one-reply, global, and ignore group chats.
 
 Example REST calls (local):
 

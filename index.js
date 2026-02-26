@@ -14,6 +14,9 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 let isClientReady = false;
 let latestQr = null;
 let latestQrAt = null;
+let autoReplyRules = [
+  { match: 'hello', reply: 'world' },
+];
 
 if (JWT_SECRET === 'dev-insecure-change-me') {
   console.warn('JWT_SECRET is using default insecure value. Set JWT_SECRET in production.');
@@ -75,15 +78,20 @@ client.on('auth_failure', (message) => {
 client.on('message', async (message) => {
   if (message.fromMe) return;
 
+  if (message.isGroupMsg || (message.from || '').endsWith('@g.us')) {
+    return;
+  }
+
   const text = (message.body || '').trim().toLowerCase();
 
-  if (text.includes('hello')) {
-    try {
-      await message.reply('world');
-      console.log(`Replied to ${message.from} with "world"`);
-    } catch (err) {
-      console.error('Failed to send reply:', err);
-    }
+  const rule = autoReplyRules.find((item) => item.match === text);
+  if (!rule) return;
+
+  try {
+    await message.reply(rule.reply);
+    console.log(`Auto-replied to ${message.from} with "${rule.reply}"`);
+  } catch (err) {
+    console.error('Failed to send auto-reply:', err);
   }
 });
 
@@ -143,6 +151,22 @@ createApiServer({
       }),
       generatedAt: latestQrAt,
     };
+  },
+  getAutoReplyRules: () => autoReplyRules.slice(),
+  addAutoReplyRule: ({ match, reply }) => {
+    const normalizedMatch = match.trim().toLowerCase();
+    const normalizedReply = reply.trim();
+
+    autoReplyRules = autoReplyRules.filter((rule) => rule.match !== normalizedMatch);
+    const next = { match: normalizedMatch, reply: normalizedReply };
+    autoReplyRules.push(next);
+    return next;
+  },
+  removeAutoReplyRule: (match) => {
+    const normalizedMatch = match.trim().toLowerCase();
+    const before = autoReplyRules.length;
+    autoReplyRules = autoReplyRules.filter((rule) => rule.match !== normalizedMatch);
+    return autoReplyRules.length !== before;
   },
 });
 

@@ -248,7 +248,8 @@ paths:
                 type: string
               examples:
                 htmlPage:
-                  value: '<!doctype html><html><body><img src="data:image/png;base64,..." /></body></html>'
+                  value: <!doctype html><html><body><img src="data:image/png;base64,..."
+                    /></body></html>
         '401':
           description: Missing or invalid bearer token
           headers:
@@ -294,6 +295,127 @@ paths:
                 notAvailable:
                   value:
                     error: QR is not available yet. Please retry in a few seconds
+  /autoreply/rules:
+    get:
+      operationId: getAutoReplyRules
+      summary: List auto-reply rules
+      responses:
+        '200':
+          description: Rules list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoReplyRulesResponse'
+              examples:
+                default:
+                  value:
+                    rules:
+                    - match: hello
+                      reply: world
+    post:
+      operationId: upsertAutoReplyRule
+      summary: Create or update an auto-reply rule
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoReplyRuleInput'
+            examples:
+              sample:
+                value:
+                  match: hello
+                  reply: world
+      responses:
+        '200':
+          description: Rule upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoReplyRuleResponse'
+              examples:
+                saved:
+                  value:
+                    rule:
+                      match: hello
+                      reply: world
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing:
+                  value:
+                    error: 'Required fields: match, reply'
+        '401':
+          description: Missing or invalid bearer token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              example: Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: deleteAutoReplyRule
+      summary: Delete an auto-reply rule
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: match
+        required: true
+        schema:
+          type: string
+        description: Exact match string to delete.
+      responses:
+        '200':
+          description: Rule deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericOkResponse'
+              examples:
+                ok:
+                  value:
+                    ok: true
+        '400':
+          description: Missing query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing:
+                  value:
+                    error: 'Query param required: match'
+        '401':
+          description: Missing or invalid bearer token
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+              example: Bearer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    error: Rule not found
 components:
   securitySchemes:
     bearerAuth:
@@ -416,3 +538,51 @@ components:
           type: string
           nullable: true
           description: Data URL PNG QR image
+    AutoReplyRule:
+      type: object
+      required:
+      - match
+      - reply
+      properties:
+        match:
+          type: string
+          example: hello
+        reply:
+          type: string
+          example: world
+    AutoReplyRuleInput:
+      type: object
+      required:
+      - match
+      - reply
+      properties:
+        match:
+          type: string
+          example: hello
+        reply:
+          type: string
+          example: world
+    AutoReplyRulesResponse:
+      type: object
+      required:
+      - rules
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutoReplyRule'
+    AutoReplyRuleResponse:
+      type: object
+      required:
+      - rule
+      properties:
+        rule:
+          $ref: '#/components/schemas/AutoReplyRule'
+    GenericOkResponse:
+      type: object
+      required:
+      - ok
+      properties:
+        ok:
+          type: boolean
+          example: true

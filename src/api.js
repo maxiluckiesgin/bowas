@@ -158,6 +158,9 @@ function createApiHandler(config) {
     deauthClient,
     requestAuthQr,
     corsOrigin,
+    getAutoReplyRules,
+    addAutoReplyRule,
+    removeAutoReplyRule,
   } = config;
 
   const corsHeaders = {
@@ -361,6 +364,74 @@ function createApiHandler(config) {
         const statusCode = message.includes('already authenticated') ? 409 : 503;
         return sendJson(res, statusCode, { error: message }, corsHeaders);
       }
+    }
+
+    if (req.method === 'GET' && pathname === '/autoreply/rules') {
+      if (typeof getAutoReplyRules !== 'function') {
+        return sendJson(res, 500, { error: 'Auto-reply is not configured' }, corsHeaders);
+      }
+
+      return sendJson(res, 200, { rules: getAutoReplyRules() }, corsHeaders);
+    }
+
+    if (req.method === 'POST' && pathname === '/autoreply/rules') {
+      const auth = jwtService.authenticateRequest(req);
+      if (!auth.ok) {
+        return sendJson(
+          res,
+          401,
+          { error: `Unauthorized: ${auth.reason}` },
+          { ...corsHeaders, 'WWW-Authenticate': 'Bearer' }
+        );
+      }
+
+      if (typeof addAutoReplyRule !== 'function') {
+        return sendJson(res, 500, { error: 'Auto-reply is not configured' }, corsHeaders);
+      }
+
+      let body;
+      try {
+        body = await readJsonBody(req);
+      } catch {
+        return sendJson(res, 400, { error: 'Invalid JSON body' }, corsHeaders);
+      }
+
+      const match = typeof body.match === 'string' ? body.match.trim() : '';
+      const reply = typeof body.reply === 'string' ? body.reply.trim() : '';
+      if (!match || !reply) {
+        return sendJson(res, 400, { error: 'Required fields: match, reply' }, corsHeaders);
+      }
+
+      const rule = addAutoReplyRule({ match, reply });
+      return sendJson(res, 200, { rule }, corsHeaders);
+    }
+
+    if (req.method === 'DELETE' && pathname === '/autoreply/rules') {
+      const auth = jwtService.authenticateRequest(req);
+      if (!auth.ok) {
+        return sendJson(
+          res,
+          401,
+          { error: `Unauthorized: ${auth.reason}` },
+          { ...corsHeaders, 'WWW-Authenticate': 'Bearer' }
+        );
+      }
+
+      if (typeof removeAutoReplyRule !== 'function') {
+        return sendJson(res, 500, { error: 'Auto-reply is not configured' }, corsHeaders);
+      }
+
+      const match = requestUrl.searchParams.get('match') || '';
+      if (!match.trim()) {
+        return sendJson(res, 400, { error: 'Query param required: match' }, corsHeaders);
+      }
+
+      const removed = removeAutoReplyRule(match);
+      if (!removed) {
+        return sendJson(res, 404, { error: 'Rule not found' }, corsHeaders);
+      }
+
+      return sendJson(res, 200, { ok: true }, corsHeaders);
     }
 
     return sendJson(res, 404, { error: 'Not found' }, corsHeaders);
