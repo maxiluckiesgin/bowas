@@ -31,6 +31,7 @@ make start
 Authenticate via API: call `POST /whatsapp/auth` to fetch QR (ASCII with `?text=true`, HTML page with image via `?html=true`, or image JSON by default). Session is stored in `.wwebjs_auth/`.
 
 Auto-reply rules are exact-match, one-reply, global, and ignore group chats.
+Rules are persisted to sqlite (`AUTOREPLY_DB_PATH`) and stored under `./data/` by default.
 
 Example REST calls (local):
 

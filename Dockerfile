@@ -4,6 +4,9 @@ WORKDIR /app
 
 # Chromium and runtime libs for Puppeteer/whatsapp-web.js
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
     chromium \
     ca-certificates \
     fonts-liberation \

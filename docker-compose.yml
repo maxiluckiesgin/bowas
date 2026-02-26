@@ -17,9 +17,11 @@ services:
       - AUTH_PASSWORD=${AUTH_PASSWORD:-admin}
       - JWT_TTL_SECONDS=${JWT_TTL_SECONDS:-3600}
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - AUTOREPLY_DB_PATH=${AUTOREPLY_DB_PATH:-/app/data/autoreply.db}
     volumes:
       - ./.wwebjs_auth:/app/.wwebjs_auth
       - ./.wwebjs_cache:/app/.wwebjs_cache
+      - ./data:/app/data
     ports:
       - "${HOST_PORT:-3000}:3000"
     command: >

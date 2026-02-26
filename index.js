@@ -1,4 +1,7 @@
 const QRCode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
+const sqlite3 = require('sqlite3');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const { createApiServer, createJwtService } = require('./src/api');
 
@@ -11,12 +14,80 @@ const AUTH_USERNAME = process.env.AUTH_USERNAME || 'admin';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'admin';
 const JWT_TTL_SECONDS = Number(process.env.JWT_TTL_SECONDS || 3600);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+const AUTOREPLY_DB_PATH = process.env.AUTOREPLY_DB_PATH || './data/autoreply.db';
 let isClientReady = false;
 let latestQr = null;
 let latestQrAt = null;
 let autoReplyRules = [
   { match: 'hello', reply: 'world' },
 ];
+
+function ensureDbDirectory(dbPath) {
+  const dir = path.dirname(dbPath);
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function createAutoReplyStore(dbPath) {
+  ensureDbDirectory(dbPath);
+  const db = new sqlite3.Database(dbPath);
+
+  db.serialize(() => {
+    db.run('PRAGMA journal_mode = WAL');
+    db.run(
+      'CREATE TABLE IF NOT EXISTS autoreply_rules (match TEXT PRIMARY KEY, reply TEXT NOT NULL)'
+    );
+  });
+
+  function loadRules(callback) {
+    db.get('SELECT COUNT(*) as count FROM autoreply_rules', (err, row) => {
+      if (err) {
+        return callback(err);
+      }
+      if ((row?.count || 0) === 0) {
+        db.run(
+          'INSERT INTO autoreply_rules(match, reply) VALUES(?, ?)',
+          ['hello', 'world'],
+          (seedErr) => {
+            if (seedErr) return callback(seedErr);
+            db.all('SELECT match, reply FROM autoreply_rules', callback);
+          }
+        );
+      } else {
+        db.all('SELECT match, reply FROM autoreply_rules', callback);
+      }
+    });
+  }
+
+  function listRules() {
+    return autoReplyRules.slice();
+  }
+
+  function upsertRule(match, reply, callback) {
+    db.run(
+      'INSERT INTO autoreply_rules(match, reply) VALUES(?, ?) ON CONFLICT(match) DO UPDATE SET reply=excluded.reply',
+      [match, reply],
+      callback
+    );
+  }
+
+  function deleteRule(match, callback) {
+    db.run('DELETE FROM autoreply_rules WHERE match = ?', [match], function (err) {
+      if (err) return callback(err);
+      callback(null, this.changes > 0);
+    });
+  }
+
+  return { db, loadRules, listRules, upsertRule, deleteRule };
+}
+
+const autoReplyStore = createAutoReplyStore(AUTOREPLY_DB_PATH);
+autoReplyStore.loadRules((err, rows) => {
+  if (err) {
+    console.error('Failed to load auto-reply rules:', err);
+    return;
+  }
+  autoReplyRules = (rows || []).map((row) => ({ match: row.match, reply: row.reply }));
+});
 
 if (JWT_SECRET === 'dev-insecure-change-me') {
   console.warn('JWT_SECRET is using default insecure value. Set JWT_SECRET in production.');
@@ -156,17 +227,32 @@ createApiServer({
   addAutoReplyRule: ({ match, reply }) => {
     const normalizedMatch = match.trim().toLowerCase();
     const normalizedReply = reply.trim();
-
-    autoReplyRules = autoReplyRules.filter((rule) => rule.match !== normalizedMatch);
     const next = { match: normalizedMatch, reply: normalizedReply };
-    autoReplyRules.push(next);
-    return next;
+
+    return new Promise((resolve, reject) => {
+      autoReplyStore.upsertRule(normalizedMatch, normalizedReply, (err) => {
+        if (err) {
+          return reject(err);
+        }
+        autoReplyRules = autoReplyRules.filter((rule) => rule.match !== normalizedMatch);
+        autoReplyRules.push(next);
+        resolve(next);
+      });
+    });
   },
   removeAutoReplyRule: (match) => {
     const normalizedMatch = match.trim().toLowerCase();
-    const before = autoReplyRules.length;
-    autoReplyRules = autoReplyRules.filter((rule) => rule.match !== normalizedMatch);
-    return autoReplyRules.length !== before;
+    return new Promise((resolve, reject) => {
+      autoReplyStore.deleteRule(normalizedMatch, (err, ok) => {
+        if (err) {
+          return reject(err);
+        }
+        if (ok) {
+          autoReplyRules = autoReplyRules.filter((rule) => rule.match !== normalizedMatch);
+        }
+        resolve(ok);
+      });
+    });
   },
 });
 

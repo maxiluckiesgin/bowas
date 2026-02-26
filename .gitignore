@@ -21,6 +21,10 @@ coverage/
 # Python cache
 __pycache__/
 
+# SQLite data
+data/
+*.db
+
 # OS/editor files
 .DS_Store
 Thumbs.db

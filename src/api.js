@@ -402,8 +402,12 @@ function createApiHandler(config) {
         return sendJson(res, 400, { error: 'Required fields: match, reply' }, corsHeaders);
       }
 
-      const rule = addAutoReplyRule({ match, reply });
-      return sendJson(res, 200, { rule }, corsHeaders);
+      try {
+        const rule = await addAutoReplyRule({ match, reply });
+        return sendJson(res, 200, { rule }, corsHeaders);
+      } catch (err) {
+        return sendJson(res, 500, { error: err?.message || 'Failed to save rule' }, corsHeaders);
+      }
     }
 
     if (req.method === 'DELETE' && pathname === '/autoreply/rules') {
@@ -426,12 +430,16 @@ function createApiHandler(config) {
         return sendJson(res, 400, { error: 'Query param required: match' }, corsHeaders);
       }
 
-      const removed = removeAutoReplyRule(match);
-      if (!removed) {
-        return sendJson(res, 404, { error: 'Rule not found' }, corsHeaders);
-      }
+      try {
+        const removed = await removeAutoReplyRule(match);
+        if (!removed) {
+          return sendJson(res, 404, { error: 'Rule not found' }, corsHeaders);
+        }
 
-      return sendJson(res, 200, { ok: true }, corsHeaders);
+        return sendJson(res, 200, { ok: true }, corsHeaders);
+      } catch (err) {
+        return sendJson(res, 500, { error: err?.message || 'Failed to delete rule' }, corsHeaders);
+      }
     }
 
     return sendJson(res, 404, { error: 'Not found' }, corsHeaders);
