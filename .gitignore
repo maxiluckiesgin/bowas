@@ -16,6 +16,9 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
+# Python cache
+__pycache__/
+
 # OS/editor files
 .DS_Store
 Thumbs.db

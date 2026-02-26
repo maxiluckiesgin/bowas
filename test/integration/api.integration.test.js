@@ -25,7 +25,7 @@ function invoke(handler, { method, url, headers = {}, body }) {
         try {
           parsed = payload ? JSON.parse(payload) : null;
         } catch {
-          parsed = null;
+          // keep parsed as null
         }
         resolve({ status: this.status, headers: this.headers, body: parsed, raw: payload });
       },
