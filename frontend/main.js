@@ -14,6 +14,12 @@ const qrTextEl = document.getElementById('qrText');
 const qrImageEl = document.getElementById('qrImage');
 const qrHtmlEl = document.getElementById('qrHtml');
 const sendResult = document.getElementById('sendResult');
+const ruleMatch = document.getElementById('ruleMatch');
+const ruleReply = document.getElementById('ruleReply');
+const addRuleBtn = document.getElementById('addRuleBtn');
+const deleteRuleBtn = document.getElementById('deleteRuleBtn');
+const refreshRulesBtn = document.getElementById('refreshRulesBtn');
+const rulesList = document.getElementById('rulesList');
 
 function getApiBase() {
   return localStorage.getItem('bowas_api_base') || defaultBase;
@@ -69,6 +75,16 @@ function showQrState({ text = '', image = '', html = '' }) {
   } else {
     qrHtmlEl.classList.add('hidden');
   }
+}
+
+async function loadRules() {
+  const result = await apiRequest('/autoreply/rules');
+  if (result.ok && result.data?.rules) {
+    const lines = result.data.rules.map((rule) => `"${rule.match}" -> "${rule.reply}"`);
+    rulesList.textContent = lines.length ? lines.join('\n') : 'No rules yet.';
+    return;
+  }
+  rulesList.textContent = result.data?.error || `Error (${result.status})`;
 }
 
 loginBtn.addEventListener('click', async () => {
@@ -130,5 +146,43 @@ saveBaseBtn.addEventListener('click', () => {
   setApiBase(apiBaseInput.value);
 });
 
+addRuleBtn.addEventListener('click', async () => {
+  const match = ruleMatch.value.trim();
+  const reply = ruleReply.value.trim();
+  const result = await apiRequest('/autoreply/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ match, reply }),
+  });
+
+  if (result.ok) {
+    await loadRules();
+  } else {
+    rulesList.textContent = result.data?.error || `Error (${result.status})`;
+  }
+});
+
+deleteRuleBtn.addEventListener('click', async () => {
+  const match = ruleMatch.value.trim();
+  if (!match) {
+    rulesList.textContent = 'Match text required for delete.';
+    return;
+  }
+  const result = await apiRequest(`/autoreply/rules?match=${encodeURIComponent(match)}`, {
+    method: 'DELETE',
+  });
+
+  if (result.ok) {
+    await loadRules();
+  } else {
+    rulesList.textContent = result.data?.error || `Error (${result.status})`;
+  }
+});
+
+refreshRulesBtn.addEventListener('click', () => {
+  loadRules();
+});
+
 renderApiBase();
 showQrState({ text: 'QR output will appear here.' });
+loadRules();
