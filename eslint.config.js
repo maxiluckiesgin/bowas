@@ -3,7 +3,13 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', '.wwebjs_auth/**', '.wwebjs_cache/**'],
+    ignores: [
+      'node_modules/**',
+      'frontend/dist/**',
+      '.npm-cache/**',
+      '.wwebjs_auth/**',
+      '.wwebjs_cache/**',
+    ],
   },
   js.configs.recommended,
   {
@@ -18,6 +24,15 @@ module.exports = [
     rules: {
       'no-redeclare': ['error', { builtinGlobals: false }],
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['frontend/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+      },
     },
   },
 ];
