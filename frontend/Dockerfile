@@ -1,7 +1,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci --no-audit --no-fund --cache /tmp/npm-cache \
+    && npm cache clean --force \
+    && rm -rf /tmp/npm-cache
 COPY . .
 RUN npm run build
 

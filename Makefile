@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: start docker-build docker-up docker-down docker-logs frontend-install frontend-dev
+.PHONY: start docker-build docker-up docker-down docker-logs local-up local-down local-logs frontend-install frontend-dev
 start:
 	@source ./projectrc && node index.js
 
@@ -27,6 +27,27 @@ docker-down:
 
 docker-logs:
 	@docker compose logs -f bowas
+
+local-up:
+	@docker compose -f docker-compose.local.yml up -d
+	@echo "Waiting for bowas local startup log..."
+	@timeout=600; elapsed=0; \
+	until docker compose -f docker-compose.local.yml logs --no-color bowas 2>&1 | grep -Fq "REST API listening on http://0.0.0.0:3000"; do \
+		sleep 2; \
+		elapsed=$$((elapsed + 2)); \
+		if [ $$elapsed -ge $$timeout ]; then \
+			echo "Timed out waiting for startup log after $$timeout seconds"; \
+			docker compose -f docker-compose.local.yml logs --no-color --tail=100 bowas; \
+			exit 1; \
+		fi; \
+	done
+	@echo "bowas local is ready"
+
+local-down:
+	@docker compose -f docker-compose.local.yml down
+
+local-logs:
+	@docker compose -f docker-compose.local.yml logs -f bowas
 
 frontend-install:
 	@cd frontend && npm install

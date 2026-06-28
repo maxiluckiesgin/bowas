@@ -43,8 +43,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxtst6 \
     && rm -rf /var/lib/apt/lists/*
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --no-audit --no-fund --cache /tmp/npm-cache \
+    && npm cache clean --force \
+    && rm -rf /tmp/npm-cache
 
 COPY . .
 

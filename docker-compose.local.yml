@@ -1,0 +1,64 @@
+name: bowas-local
+
+services:
+  bowas:
+    image: node:22-bookworm-slim
+    container_name: bowas-local
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - PUPPETEER_HEADLESS=true
+      - WWEBJS_AUTH_PATH=/app/.wwebjs_auth
+      - WWEBJS_CLIENT_ID=local-docker
+      - JWT_SECRET=${JWT_SECRET:-dev-insecure-change-me}
+      - JWT_ISSUER=${JWT_ISSUER:-}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-}
+      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-admin}
+      - JWT_TTL_SECONDS=${JWT_TTL_SECONDS:-3600}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - AUTOREPLY_DB_PATH=/app/data/autoreply.db
+    volumes:
+      - .:/app
+      - bowas_node_modules:/app/node_modules
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    command: >
+      sh -lc "apt-get update &&
+      apt-get install -y --no-install-recommends
+      python3 make g++ chromium ca-certificates fonts-liberation
+      libasound2 libatk-bridge2.0-0 libatk1.0-0 libc6 libcairo2 libcups2
+      libdbus-1-3 libexpat1 libfontconfig1 libgbm1 libgcc-s1 libglib2.0-0
+      libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0
+      libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1
+      libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1
+      libxss1 libxtst6 &&
+      rm -rf /var/lib/apt/lists/* &&
+      npm ci --omit=dev --no-audit --no-fund &&
+      rm -f /app/.wwebjs_auth/session-local-docker/SingletonLock
+      /app/.wwebjs_auth/session-local-docker/SingletonCookie
+      /app/.wwebjs_auth/session-local-docker/SingletonSocket &&
+      npm start"
+
+  frontend:
+    image: node:20-alpine
+    container_name: bowas-local-frontend
+    restart: unless-stopped
+    working_dir: /app/frontend
+    depends_on:
+      - bowas
+    environment:
+      - VITE_API_PROXY_TARGET=http://bowas:3000
+    volumes:
+      - .:/app
+      - bowas_frontend_node_modules:/app/frontend/node_modules
+    ports:
+      - "${FRONTEND_PORT:-8080}:5173"
+    command: >
+      sh -lc "npm ci --no-audit --no-fund &&
+      npm run dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  bowas_node_modules:
+  bowas_frontend_node_modules:

@@ -6,10 +6,10 @@ Bright, fast, and no-nonsense WhatsApp automation with a clean API and a tiny fr
 
 ```bash
 cd /home/$USER/bowas
-make docker-up
+make local-up
 ```
 
-Open the UI at `http://localhost:8013` (or your `FRONTEND_PORT`).
+Open the UI at `http://localhost:8080` (or your `FRONTEND_PORT`).
 
 ## Superpowers
 
@@ -71,6 +71,24 @@ curl http://localhost:3001/health
 ```
 
 ## Docker run
+
+No-build local containers, useful when the host Node version is too old or Docker image builds are slow:
+
+```bash
+cd /home/$USER/bowas
+make local-up
+make local-logs
+```
+
+Stop:
+
+```bash
+make local-down
+```
+
+The first run installs Chromium and npm dependencies inside the running containers, so it can take several minutes.
+
+Production-style image build:
 
 ```bash
 cd /home/$USER/bowas
